@@ -1,39 +1,33 @@
-export interface FleetStatus {
-  id: string;
-  fleet_id: string;
-  active_vehicles: number;
-  avg_fuel_efficiency: number;
-  maintenance_due_count: number;
-  route_compliance_percent: number;
-  created_at: string;
-}
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
-export interface VehicleStatus {
-  vehicle_id: string;
-  driver: string;
-  status: string;
-  location: string;
-}
-
-export async function api<T>(
-  path: string,
-  init: RequestInit = {}
-): Promise<T> {
-  const url = `/api/v1${path}`;
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(init.headers as Record<string, string>),
-  };
-
-  const res = await fetch(url, {
-    ...init,
-    headers,
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "Unknown error");
-    throw new Error(`API error ${res.status}: ${text}`);
+class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
   }
-
-  return res.json() as Promise<T>;
 }
+
+async function fetchJson<T>(path: string, options?: RequestInit): Promise<T> {
+  const url = `${API_BASE}${path}`;
+  const response = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+      ...options?.headers,
+    },
+    ...options,
+  });
+  if (!response.ok) {
+    const error = await response.text();
+    throw new ApiError(`API error ${response.status}: ${error}`, response.status);
+  }
+  return response.json();
+}
+
+export async function getHealth() {
+  return fetchJson<{ status: string }>("/health/");
+}
+
+// TODO: Add app-specific API functions here
+
+export { ApiError };
