@@ -37,7 +37,7 @@ export { ApiError };
 export const api = fetchJson;
 
 // ── Type stubs ──
-// Permissive Record stubs until each domain shape is locked in.
+// Permissive `any` stubs until each domain shape is locked in.
 // Tighten these to real interfaces as the app stabilizes.
-export type FleetStatus = Record<string, unknown>;
-export type VehicleStatus = Record<string, unknown>;
+export type FleetStatus = any;
+export type VehicleStatus = any;
