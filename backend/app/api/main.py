@@ -1,10 +1,22 @@
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.routes import health
+from app.api.v1 import (
+    ai_chat,
+    assets,
+    drivers,
+    fuel,
+    geofences,
+    locations,
+    maintenance,
+    routes_api,
+    vehicles,
+)
 from app.core.config import settings
 from app.core.database import init_db
-from app.api.routes import health
 
 
 @asynccontextmanager
@@ -15,7 +27,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.app_name,
-    version="1.0.0",
+    version="1.2.0",
     lifespan=lifespan,
 )
 
@@ -28,6 +40,14 @@ app.add_middleware(
 )
 
 app.include_router(health.router, prefix="/health", tags=["health"])
-# TODO: Wire v1 routers here after creating them
-# from app.api.v1 import some_router
-# app.include_router(some_router.router, prefix="/api/v1/some", tags=["some"])
+
+API_V1 = "/api/v1"
+app.include_router(vehicles.router, prefix=f"{API_V1}/vehicles", tags=["vehicles"])
+app.include_router(drivers.router, prefix=f"{API_V1}/drivers", tags=["drivers"])
+app.include_router(assets.router, prefix=f"{API_V1}/assets", tags=["assets"])
+app.include_router(geofences.router, prefix=f"{API_V1}/geofences", tags=["geofences"])
+app.include_router(locations.router, prefix=f"{API_V1}/locations", tags=["tracking"])
+app.include_router(maintenance.router, prefix=f"{API_V1}/maintenance", tags=["maintenance"])
+app.include_router(fuel.router, prefix=f"{API_V1}/fuel-logs", tags=["fuel"])
+app.include_router(routes_api.router, prefix=f"{API_V1}/routes", tags=["routes"])
+app.include_router(ai_chat.router, prefix=f"{API_V1}/ai", tags=["ai"])
