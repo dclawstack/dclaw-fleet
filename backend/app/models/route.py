@@ -1,7 +1,8 @@
 import uuid
+from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Float, ForeignKey, Integer, String
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -24,6 +25,8 @@ class Route(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
     optimized_distance_miles: Mapped[float | None] = mapped_column(Float, nullable=True)
     optimized_duration_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    external_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     stops: Mapped[list["RouteStop"]] = relationship(
         "RouteStop",

@@ -13,7 +13,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.ai_chat import AIChatMessage, AIChatSession
 from app.repositories.ai_chat_repo import AIChatMessageRepository, AIChatSessionRepository
 from app.repositories.driver_repo import DriverRepository
+from app.repositories.expense_repo import ExpenseRepository
 from app.repositories.maintenance_repo import MaintenanceRepository
+from app.repositories.permit_repo import PermitRepository
 from app.repositories.vehicle_repo import VehicleRepository
 
 
@@ -21,18 +23,32 @@ async def _fleet_snapshot(db: AsyncSession) -> dict:
     v_repo = VehicleRepository(db)
     d_repo = DriverRepository(db)
     m_repo = MaintenanceRepository(db)
+    p_repo = PermitRepository(db)
+    e_repo = ExpenseRepository(db)
+
     vehicles, vehicle_total = await v_repo.list_all(limit=1000)
     drivers, driver_total = await d_repo.list_all(limit=1000)
     overdue = await m_repo.overdue(date.today())
+    expired_permits = await p_repo.expired()
+    expiring_permits = await p_repo.expiring_within(30)
+    pending_expenses = await e_repo.pending()
+
+    low_score_drivers = [d for d in drivers if d.safety_score < 70]
+
     return {
         "vehicle_total": vehicle_total,
         "vehicles_active": sum(1 for v in vehicles if v.status == "active"),
         "driver_total": driver_total,
         "drivers_active": sum(1 for d in drivers if d.status == "active"),
+        "low_score_drivers": len(low_score_drivers),
         "overdue_maintenance": [
             {"task": t.task_type, "vehicle_id": str(t.vehicle_id), "due": t.due_date and t.due_date.isoformat()}
             for t in overdue
         ],
+        "expired_permits": len(expired_permits),
+        "expiring_permits": len(expiring_permits),
+        "pending_expenses_count": len(pending_expenses),
+        "pending_expenses_amount": sum(float(e.amount) for e in pending_expenses),
     }
 
 
@@ -42,6 +58,11 @@ INTENTS: list[tuple[re.Pattern, str]] = [
     (re.compile(r"\b(overdue|due|maintenance|service|pm)\b", re.I), "maintenance"),
     (re.compile(r"\b(fuel|mpg|efficien|consumption)\b", re.I), "fuel"),
     (re.compile(r"\b(geofence|boundary|zone)\b", re.I), "geofence"),
+    (re.compile(r"\b(safety|coaching|behavior|harsh|speeding|risky)\b", re.I), "safety"),
+    (re.compile(r"\b(hos|hours|eld|compliance|inspection|dvir)\b", re.I), "compliance"),
+    (re.compile(r"\b(permit|license|expir)\b", re.I), "permits"),
+    (re.compile(r"\b(expense|cost|spend|reimburs|fraud)\b", re.I), "expenses"),
+    (re.compile(r"\b(assign|dispatch|optimize|route)\b", re.I), "routes"),
     (re.compile(r"\b(hello|hi|hey|help)\b", re.I), "greeting"),
 ]
 
@@ -57,9 +78,9 @@ def _render(intent: str, snap: dict) -> tuple[str, list[str]]:
     if intent == "greeting":
         return (
             f"Hi — I'm your Fleet Copilot. You have {snap['vehicle_total']} vehicles and "
-            f"{snap['driver_total']} drivers on the books. Ask me about maintenance, fuel, "
-            "drivers, vehicles, or geofences.",
-            ["List overdue maintenance", "Show low-MPG vehicles", "How many active drivers?"],
+            f"{snap['driver_total']} drivers on the books. Ask about maintenance, fuel, "
+            "safety, compliance, expenses, routes, or geofences.",
+            ["List overdue maintenance", "Show low-scoring drivers", "Pending expenses?"],
         )
     if intent == "vehicle_count":
         return (
@@ -97,10 +118,48 @@ def _render(intent: str, snap: dict) -> tuple[str, list[str]]:
             "Inclusion fences alert when a vehicle exits; exclusion fences alert when one enters.",
             ["Create geofence", "Recent breach alerts"],
         )
+    if intent == "safety":
+        low = snap["low_score_drivers"]
+        if low == 0:
+            return (
+                "No drivers currently below the 70 safety threshold.",
+                ["Show recent driving events", "Coaching tips"],
+            )
+        return (
+            f"{low} driver(s) are under the 70 safety threshold. Pull "
+            "`/api/v1/driving-events/drivers/{driver_id}/coaching` for personalized tips.",
+            ["List low-score drivers", "Send coaching message"],
+        )
+    if intent == "compliance":
+        return (
+            f"{snap['expired_permits']} expired permit(s); {snap['expiring_permits']} expiring in the "
+            "next 30 days. HOS status is per-driver — query "
+            "`/api/v1/hos-logs/drivers/{driver_id}/status`.",
+            ["Show expiring permits", "Today's HOS violations"],
+        )
+    if intent == "permits":
+        return (
+            f"{snap['expired_permits']} expired and {snap['expiring_permits']} expiring within 30 days. "
+            "Renew via `/api/v1/permits/{id}`.",
+            ["List expired permits", "Renew highest-priority permit"],
+        )
+    if intent == "expenses":
+        return (
+            f"{snap['pending_expenses_count']} expense(s) pending approval totaling "
+            f"${snap['pending_expenses_amount']:,.2f}. I'll auto-categorize on submit and "
+            "flag duplicates/oversized amounts.",
+            ["Approve pending expenses", "Show flagged expenses"],
+        )
+    if intent == "routes":
+        return (
+            "Routes can be optimized with `/api/v1/routes/{id}/optimize` or auto-assigned to vehicles "
+            "via `/api/v1/route-integration/auto-assign` (skips maintenance-hold vehicles).",
+            ["Auto-assign all routes", "Sync with DClaw Route"],
+        )
     return (
-        "I can help with vehicles, drivers, maintenance, fuel, routes, and geofences. "
-        "Try: 'List overdue maintenance' or 'How many active drivers?'",
-        ["List overdue maintenance", "How many active drivers?"],
+        "I can help with vehicles, drivers, maintenance, fuel, safety, compliance, expenses, "
+        "routes, and geofences. Try: 'Show overdue maintenance' or 'How many drivers under 70?'.",
+        ["List overdue maintenance", "Show low-scoring drivers"],
     )
 
 

@@ -8,10 +8,16 @@ from app.api.v1 import (
     ai_chat,
     assets,
     drivers,
+    driving_events,
+    dvir,
+    expenses,
     fuel,
     geofences,
+    hos,
     locations,
     maintenance,
+    permits,
+    route_integration,
     routes_api,
     vehicles,
 )
@@ -51,3 +57,11 @@ app.include_router(maintenance.router, prefix=f"{API_V1}/maintenance", tags=["ma
 app.include_router(fuel.router, prefix=f"{API_V1}/fuel-logs", tags=["fuel"])
 app.include_router(routes_api.router, prefix=f"{API_V1}/routes", tags=["routes"])
 app.include_router(ai_chat.router, prefix=f"{API_V1}/ai", tags=["ai"])
+
+# P1 features (v1.2)
+app.include_router(driving_events.router, prefix=f"{API_V1}/driving-events", tags=["driver-behavior"])
+app.include_router(hos.router, prefix=f"{API_V1}/hos-logs", tags=["compliance"])
+app.include_router(dvir.router, prefix=f"{API_V1}/dvir", tags=["compliance"])
+app.include_router(permits.router, prefix=f"{API_V1}/permits", tags=["compliance"])
+app.include_router(expenses.router, prefix=f"{API_V1}/expenses", tags=["expenses"])
+app.include_router(route_integration.router, prefix=f"{API_V1}/route-integration", tags=["integrations"])
