@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Truck, Users, Wrench, Fuel, Map as MapIcon, Route, Package, LayoutDashboard,
-  ShieldCheck, Receipt,
+  ShieldCheck, Receipt, Zap, AlertOctagon, Boxes, Sparkles,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -19,6 +19,10 @@ const NAV = [
   { href: "/routes", label: "Routes", icon: Route },
   { href: "/compliance", label: "Compliance", icon: ShieldCheck },
   { href: "/expenses", label: "Expenses", icon: Receipt },
+  { href: "/ev", label: "EV", icon: Zap },
+  { href: "/accidents", label: "Accidents", icon: AlertOctagon },
+  { href: "/parts", label: "Parts", icon: Boxes },
+  { href: "/operations", label: "AI Ops", icon: Sparkles },
   { href: "/assets", label: "Assets", icon: Package },
 ];
 

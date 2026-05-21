@@ -5,8 +5,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import health
 from app.api.v1 import (
+    accidents,
     ai_chat,
     assets,
+    charging,
+    dashcam,
     drivers,
     driving_events,
     dvir,
@@ -16,9 +19,12 @@ from app.api.v1 import (
     hos,
     locations,
     maintenance,
+    parts,
     permits,
+    predictive,
     route_integration,
     routes_api,
+    telematics,
     vehicles,
 )
 from app.core.config import settings
@@ -65,3 +71,11 @@ app.include_router(dvir.router, prefix=f"{API_V1}/dvir", tags=["compliance"])
 app.include_router(permits.router, prefix=f"{API_V1}/permits", tags=["compliance"])
 app.include_router(expenses.router, prefix=f"{API_V1}/expenses", tags=["expenses"])
 app.include_router(route_integration.router, prefix=f"{API_V1}/route-integration", tags=["integrations"])
+
+# P2 features (v1.3+)
+app.include_router(charging.router, prefix=f"{API_V1}/charging", tags=["ev"])
+app.include_router(accidents.router, prefix=f"{API_V1}/accidents", tags=["accidents"])
+app.include_router(parts.router, prefix=f"{API_V1}/parts", tags=["inventory"])
+app.include_router(telematics.router, prefix=f"{API_V1}/telematics", tags=["telematics"])
+app.include_router(dashcam.router, prefix=f"{API_V1}/dashcam", tags=["dashcam"])
+app.include_router(predictive.router, prefix=f"{API_V1}/predictive", tags=["predictive"])
