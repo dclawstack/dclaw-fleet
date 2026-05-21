@@ -25,8 +25,8 @@ status: Future
 | **Tagline** | Fleet management |
 | **Color** | #3B82F6 |
 | **Phase** | Future |
-| **Port (Frontend Dev)** | 3099 (TBD — assign before build) |
-| **Port (Backend Dev)** | 18169 (TBD — assign before build) |
+| **Port (Frontend Dev)** | 3051 |
+| **Port (Backend Dev)** | 8051 |
 | **Maturity Tier** | 🟡 Tier 2 — Partial |
 
 ---
