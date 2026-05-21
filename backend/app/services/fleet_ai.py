@@ -11,10 +11,12 @@ from datetime import date
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.ai_chat import AIChatMessage, AIChatSession
+from app.repositories.accident_repo import AccidentRepository
 from app.repositories.ai_chat_repo import AIChatMessageRepository, AIChatSessionRepository
 from app.repositories.driver_repo import DriverRepository
 from app.repositories.expense_repo import ExpenseRepository
 from app.repositories.maintenance_repo import MaintenanceRepository
+from app.repositories.part_repo import PartRepository
 from app.repositories.permit_repo import PermitRepository
 from app.repositories.vehicle_repo import VehicleRepository
 
@@ -25,6 +27,8 @@ async def _fleet_snapshot(db: AsyncSession) -> dict:
     m_repo = MaintenanceRepository(db)
     p_repo = PermitRepository(db)
     e_repo = ExpenseRepository(db)
+    a_repo = AccidentRepository(db)
+    part_repo = PartRepository(db)
 
     vehicles, vehicle_total = await v_repo.list_all(limit=1000)
     drivers, driver_total = await d_repo.list_all(limit=1000)
@@ -32,12 +36,16 @@ async def _fleet_snapshot(db: AsyncSession) -> dict:
     expired_permits = await p_repo.expired()
     expiring_permits = await p_repo.expiring_within(30)
     pending_expenses = await e_repo.pending()
+    open_claims = await a_repo.open_claims()
+    low_stock = await part_repo.low_stock()
 
     low_score_drivers = [d for d in drivers if d.safety_score < 70]
+    ev_vehicles = [v for v in vehicles if v.fuel_type == "electric"]
 
     return {
         "vehicle_total": vehicle_total,
         "vehicles_active": sum(1 for v in vehicles if v.status == "active"),
+        "ev_count": len(ev_vehicles),
         "driver_total": driver_total,
         "drivers_active": sum(1 for d in drivers if d.status == "active"),
         "low_score_drivers": len(low_score_drivers),
@@ -49,6 +57,9 @@ async def _fleet_snapshot(db: AsyncSession) -> dict:
         "expiring_permits": len(expiring_permits),
         "pending_expenses_count": len(pending_expenses),
         "pending_expenses_amount": sum(float(e.amount) for e in pending_expenses),
+        "open_claims_count": len(open_claims),
+        "open_claims_amount": sum(float(a.predicted_claim_amount or 0) for a in open_claims),
+        "low_stock_parts": len(low_stock),
     }
 
 
@@ -63,6 +74,13 @@ INTENTS: list[tuple[re.Pattern, str]] = [
     (re.compile(r"\b(permit|license|expir)\b", re.I), "permits"),
     (re.compile(r"\b(expense|cost|spend|reimburs|fraud)\b", re.I), "expenses"),
     (re.compile(r"\b(assign|dispatch|optimize|route)\b", re.I), "routes"),
+    (re.compile(r"\b(ev|electric|charge|charging|range|soc)\b", re.I), "ev"),
+    (re.compile(r"\b(accidents?|crash(?:es)?|claims?|incidents?)\b", re.I), "accidents"),
+    (re.compile(r"\b(parts?|inventory|tires?|brake pads?|stock|reorder)\b", re.I), "parts"),
+    (re.compile(r"\b(telematics|obd|devices?|heartbeats?|sensors?)\b", re.I), "telematics"),
+    (re.compile(r"\b(dashcams?|cameras?|videos?|distraction|collisions?)\b", re.I), "dashcam"),
+    (re.compile(r"\b(predict|predictive|failures?|forecasts?)\b", re.I), "predictive"),
+    (re.compile(r"\b(carbon|co2|emissions?|footprint|green|eco)\b", re.I), "carbon"),
     (re.compile(r"\b(hello|hi|hey|help)\b", re.I), "greeting"),
 ]
 
@@ -152,9 +170,57 @@ def _render(intent: str, snap: dict) -> tuple[str, list[str]]:
         )
     if intent == "routes":
         return (
-            "Routes can be optimized with `/api/v1/routes/{id}/optimize` or auto-assigned to vehicles "
-            "via `/api/v1/route-integration/auto-assign` (skips maintenance-hold vehicles).",
-            ["Auto-assign all routes", "Sync with DClaw Route"],
+            "Routes can be optimized with `/api/v1/routes/{id}/optimize`, auto-assigned via "
+            "`/api/v1/route-integration/auto-assign`, or planned by the autonomous dispatcher at "
+            "`/api/v1/predictive/dispatch/plan` (skips maintenance holds, prefers high-safety drivers).",
+            ["Auto-assign all routes", "Run autonomous dispatch"],
+        )
+    if intent == "ev":
+        return (
+            f"You have {snap['ev_count']} electric vehicle(s). Per-vehicle range and charge "
+            "recommendations are at `/api/v1/charging/vehicles/{id}/range` and `/recommendation`.",
+            ["Predict EV range", "Schedule overnight charging"],
+        )
+    if intent == "accidents":
+        if snap["open_claims_count"] == 0:
+            return ("No open accident claims — fleet is clear.", ["Log new incident", "Claims history"])
+        return (
+            f"{snap['open_claims_count']} open claim(s); AI-predicted total ~"
+            f"${snap['open_claims_amount']:,.0f}.",
+            ["List open claims", "Predict claim amount"],
+        )
+    if intent == "parts":
+        if snap["low_stock_parts"] == 0:
+            return ("Parts inventory is healthy — no items below threshold.", ["Add part", "Show usage"])
+        return (
+            f"{snap['low_stock_parts']} part(s) below reorder threshold. "
+            "`/api/v1/parts/reorder-recommendations` will compute order quantities.",
+            ["Show reorder recommendations", "Add new part"],
+        )
+    if intent == "telematics":
+        return (
+            "Devices are registered at `/api/v1/telematics/devices`. Vendor payloads ingest via "
+            "`/heartbeat` and anomalies (missing fields, implausible speed, hot engine) are flagged inline.",
+            ["Register device", "Show anomalies"],
+        )
+    if intent == "dashcam":
+        return (
+            "Dashcam events stream into `/api/v1/dashcam` — collision, distraction, lane drift, "
+            "hard cornering. Severity feeds the driver safety score.",
+            ["List collision events", "Top risky drivers"],
+        )
+    if intent == "predictive":
+        return (
+            "Predictive maintenance combines odometer, driving events, and dashcam history. "
+            "Hit `/api/v1/predictive/maintenance/vehicles/{id}` for component-level risk.",
+            ["Show top at-risk vehicles", "Schedule replacements"],
+        )
+    if intent == "carbon":
+        return (
+            "Fleet CO2 footprint is derived from fuel logs using EPA factors "
+            "(8.887 kg/gal gas, 10.18 kg/gal diesel). Per-vehicle at "
+            "`/api/v1/predictive/carbon/vehicles/{id}`; fleet total at `/carbon/fleet`.",
+            ["Show fleet carbon", "Top emitters"],
         )
     return (
         "I can help with vehicles, drivers, maintenance, fuel, safety, compliance, expenses, "

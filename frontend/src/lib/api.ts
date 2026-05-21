@@ -450,6 +450,187 @@ export const routeIntegration = {
     api<AutoAssignResult>("/api/v1/route-integration/auto-assign", { method: "POST" }),
 };
 
+// ── P2 domain types ──
+export interface ChargingSession {
+  id: string;
+  vehicle_id: string;
+  station_id: string | null;
+  started_at: string;
+  ended_at: string | null;
+  energy_kwh: number;
+  cost: number;
+  soc_start: number | null;
+  soc_end: number | null;
+}
+
+export interface RangePrediction {
+  vehicle_id: string;
+  current_soc: number | null;
+  estimated_range_miles: number;
+  confidence: string;
+  notes: string[];
+}
+
+export interface ChargeRecommendation {
+  vehicle_id: string;
+  needs_charge: boolean;
+  target_soc: number;
+  suggested_window: string;
+  reason: string;
+}
+
+export interface AccidentReport {
+  id: string;
+  vehicle_id: string;
+  driver_id: string | null;
+  occurred_at: string;
+  severity_score: number;
+  photos_count: number;
+  description: string | null;
+  claim_status: string;
+  claim_amount: number;
+  predicted_claim_amount: number | null;
+  lat: number | null;
+  lng: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Part {
+  id: string;
+  name: string;
+  sku: string;
+  category: string;
+  vendor: string | null;
+  stock: number;
+  reorder_threshold: number;
+  unit_cost: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReorderRecommendation {
+  part_id: string;
+  sku: string;
+  name: string;
+  current_stock: number;
+  reorder_threshold: number;
+  suggested_order_qty: number;
+  estimated_cost: number;
+}
+
+export interface TelematicsDevice {
+  id: string;
+  vehicle_id: string;
+  vendor: string;
+  device_id: string;
+  status: string;
+  last_seen_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DashcamEvent {
+  id: string;
+  vehicle_id: string;
+  driver_id: string | null;
+  event_type: string;
+  severity: number;
+  video_url: string | null;
+  recorded_at: string;
+}
+
+export interface PartFailurePrediction {
+  vehicle_id: string;
+  component: string;
+  probability: number;
+  suggested_action: string;
+  reason: string;
+}
+
+export interface PredictiveReport {
+  vehicle_id: string;
+  overall_risk: string;
+  predictions: PartFailurePrediction[];
+}
+
+export interface CarbonReport {
+  vehicle_id: string | null;
+  co2_kg: number;
+  fuel_gallons: number;
+  miles: number;
+  co2_per_mile_g: number;
+  suggestions: string[];
+}
+
+export interface AutonomousDispatchResult {
+  assignments: { route_id: string; vehicle_id: string; vehicle_plate: string; score: number }[];
+  rejected: { route_id: string; reason: string }[];
+  score: number;
+}
+
+// ── P2 endpoints ──
+export const charging = {
+  list: () => api<ChargingSession[]>("/api/v1/charging"),
+  create: (data: Partial<ChargingSession>) =>
+    api<ChargingSession>("/api/v1/charging", { method: "POST", body: JSON.stringify(data) }),
+  forVehicle: (vehicleId: string) =>
+    api<ChargingSession[]>(`/api/v1/charging/vehicles/${vehicleId}`),
+  range: (vehicleId: string) =>
+    api<RangePrediction>(`/api/v1/charging/vehicles/${vehicleId}/range`),
+  recommendation: (vehicleId: string) =>
+    api<ChargeRecommendation>(`/api/v1/charging/vehicles/${vehicleId}/recommendation`),
+};
+
+export const accidents = {
+  list: () => api<AccidentReport[]>("/api/v1/accidents"),
+  create: (data: Partial<AccidentReport>) =>
+    api<AccidentReport>("/api/v1/accidents", { method: "POST", body: JSON.stringify(data) }),
+  openClaims: () => api<AccidentReport[]>("/api/v1/accidents/open-claims"),
+  update: (id: string, data: Partial<AccidentReport>) =>
+    api<AccidentReport>(`/api/v1/accidents/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+};
+
+export const parts = {
+  list: () => api<Part[]>("/api/v1/parts"),
+  create: (data: Partial<Part>) =>
+    api<Part>("/api/v1/parts", { method: "POST", body: JSON.stringify(data) }),
+  lowStock: () => api<Part[]>("/api/v1/parts/low-stock"),
+  recommendations: () => api<ReorderRecommendation[]>("/api/v1/parts/reorder-recommendations"),
+  update: (id: string, data: Partial<Part>) =>
+    api<Part>(`/api/v1/parts/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  remove: (id: string) => api<void>(`/api/v1/parts/${id}`, { method: "DELETE" }),
+};
+
+export const telematics = {
+  devices: () => api<TelematicsDevice[]>("/api/v1/telematics/devices"),
+  registerDevice: (data: Partial<TelematicsDevice>) =>
+    api<TelematicsDevice>("/api/v1/telematics/devices", { method: "POST", body: JSON.stringify(data) }),
+  heartbeat: (device_id: string, payload: Record<string, any>) =>
+    api<{ device_id: string; vehicle_id: string; anomalies: string[] }>(
+      "/api/v1/telematics/heartbeat",
+      { method: "POST", body: JSON.stringify({ device_id, payload }) }
+    ),
+};
+
+export const dashcam = {
+  list: () => api<DashcamEvent[]>("/api/v1/dashcam"),
+  create: (data: Partial<DashcamEvent>) =>
+    api<DashcamEvent>("/api/v1/dashcam", { method: "POST", body: JSON.stringify(data) }),
+  forVehicle: (vehicleId: string) =>
+    api<DashcamEvent[]>(`/api/v1/dashcam/vehicles/${vehicleId}`),
+};
+
+export const predictive = {
+  maintenance: (vehicleId: string) =>
+    api<PredictiveReport>(`/api/v1/predictive/maintenance/vehicles/${vehicleId}`),
+  carbonVehicle: (vehicleId: string) =>
+    api<CarbonReport>(`/api/v1/predictive/carbon/vehicles/${vehicleId}`),
+  carbonFleet: () => api<CarbonReport>("/api/v1/predictive/carbon/fleet"),
+  dispatchPlan: () =>
+    api<AutonomousDispatchResult>("/api/v1/predictive/dispatch/plan", { method: "POST" }),
+};
+
 // ── Back-compat type stubs (legacy callers) ──
 export type FleetStatus = any;
 export type VehicleStatus = any;
