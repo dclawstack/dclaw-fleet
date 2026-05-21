@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Plus, Trash2 } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
@@ -61,7 +62,8 @@ export default function DriversPage() {
       <Table
         headers={["Name", "Email", "License", "Safety", "Status", ""]}
         rows={items.map((d) => [
-          d.name, d.email, d.license_number,
+          <Link key="n" href={`/drivers/${d.id}`} className="text-blue-600 hover:underline">{d.name}</Link>,
+          d.email, d.license_number,
           <SafetyBar key="s" score={d.safety_score} />,
           <Status key="st" value={d.status} />,
           <button key="del" onClick={() => handleDelete(d.id)} className="text-slate-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>,
