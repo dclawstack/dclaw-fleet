@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 
-import { FleetCopilot } from "@/components/fleet-copilot";
-import { NavShell } from "@/components/nav-shell";
+import { AppShell } from "@/components/app-shell";
 
 import "./globals.css";
 import "leaflet/dist/leaflet.css";
@@ -22,8 +21,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <NavShell>{children}</NavShell>
-        <FleetCopilot />
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

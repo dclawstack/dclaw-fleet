@@ -1,3 +1,5 @@
+import { clearAuth, getToken } from "@/lib/auth";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
 export class ApiError extends Error {
@@ -10,13 +12,21 @@ export class ApiError extends Error {
 
 async function fetchJson<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE}${path}`;
-  const response = await fetch(url, {
-    headers: {
-      "Content-Type": "application/json",
-      ...options?.headers,
-    },
-    ...options,
-  });
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options?.headers as Record<string, string> | undefined),
+  };
+  const token = getToken();
+  if (token && !headers["Authorization"]) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  const response = await fetch(url, { ...options, headers });
+  if (response.status === 401 && !path.startsWith("/api/v1/auth/login")) {
+    clearAuth();
+    if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+      window.location.href = "/login";
+    }
+  }
   if (response.status === 204) {
     return undefined as unknown as T;
   }
@@ -265,6 +275,37 @@ export const fleetAi = {
     api<ChatTurn>("/api/v1/ai/chat", {
       method: "POST",
       body: JSON.stringify({ message, session_id }),
+    }),
+};
+
+// ── Auth ──
+export interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+}
+
+export interface MeResponse {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export const auth = {
+  login: (email: string, password: string) =>
+    api<LoginResponse>("/api/v1/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+  me: () => api<MeResponse>("/api/v1/auth/me"),
+  register: (data: { email: string; password: string; name: string; role?: string }) =>
+    api<MeResponse>("/api/v1/auth/register", {
+      method: "POST",
+      body: JSON.stringify(data),
     }),
 };
 
