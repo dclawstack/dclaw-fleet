@@ -17,6 +17,7 @@ from app.models.part import Part
 from app.models.permit import Permit
 from app.models.route import Route, RouteStop
 from app.models.telematics import TelematicsDevice
+from app.models.user import User
 from app.models.vehicle import Vehicle
 
 __all__ = [
@@ -41,5 +42,6 @@ __all__ = [
     "Route",
     "RouteStop",
     "TelematicsDevice",
+    "User",
     "Vehicle",
 ]
