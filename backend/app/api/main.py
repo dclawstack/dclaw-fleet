@@ -11,6 +11,7 @@ from app.api.v1 import (
     auth,
     charging,
     dashcam,
+    demo,
     drivers,
     driving_events,
     dvir,
@@ -59,6 +60,9 @@ API_V1 = "/api/v1"
 
 # Auth routes — public except /me and /register (those declare their own deps)
 app.include_router(auth.router, prefix=f"{API_V1}/auth", tags=["auth"])
+
+# Demo routes — public, gated by ENABLE_DEMO_MODE inside the router
+app.include_router(demo.router, prefix=f"{API_V1}/demo", tags=["demo"])
 
 # All other /api/v1/* require a valid JWT.
 PROTECTED = [Depends(get_current_user)]

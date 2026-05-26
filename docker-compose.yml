@@ -24,6 +24,8 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/dclaw_fleet
       APP_ENV: production
+      # Demo mode — set ENABLE_DEMO_MODE=false in production deployments.
+      ENABLE_DEMO_MODE: "true"
     ports:
       - "8051:8051"
     depends_on:

@@ -8,3 +8,7 @@
 # Environment
 .env
 .env.local
+.vercel
+
+# Compose
+docker-compose.override.yml

@@ -12,6 +12,12 @@ class Settings(BaseSettings):
     secret_key: str = "change-me-in-production"
     access_token_expire_minutes: int = 60
 
+    # Demo mode — when True, exposes public /api/v1/demo/* endpoints that
+    # seed and tear down DEMO-* sample data for the landing page.
+    # Leave False in production. Reset is scoped to records carrying the
+    # DEMO- marker so real data cannot be touched even if the flag is on.
+    enable_demo_mode: bool = False
+
     class Config:
         env_file = ".env"
         case_sensitive = False

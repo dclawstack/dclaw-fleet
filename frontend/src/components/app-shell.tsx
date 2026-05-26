@@ -7,7 +7,7 @@ import { FleetCopilot } from "@/components/fleet-copilot";
 import { NavShell } from "@/components/nav-shell";
 import { getToken } from "@/lib/auth";
 
-const PUBLIC_PATHS = new Set(["/login"]);
+const PUBLIC_PATHS = new Set(["/", "/login"]);
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "/";
