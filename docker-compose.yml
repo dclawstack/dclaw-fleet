@@ -50,7 +50,10 @@ services:
     depends_on:
       - backend
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3051/"]
+      # Use 127.0.0.1 because /etc/hosts resolves localhost to ::1 first and
+      # Next.js standalone binds IPv4 only; busybox wget gets connection
+      # refused on the IPv6 attempt without falling through.
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3051/"]
       interval: 30s
       timeout: 5s
       retries: 3
