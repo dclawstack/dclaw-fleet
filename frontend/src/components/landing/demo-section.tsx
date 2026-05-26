@@ -21,6 +21,11 @@ interface DemoSeedResult {
   credentials: { email: string; password: string };
 }
 
+// Demo credentials are public by design — same constants the backend uses.
+// Keeping them frontend-side too means the Sign-In button works on page
+// reload (i.e. even when /seed wasn't the request that just ran).
+const DEMO_CREDENTIALS = { email: "demo@dclaw.io", password: "DemoPass123!" };
+
 type DemoView =
   | { kind: "loading" }
   | { kind: "unreachable" }
@@ -30,7 +35,6 @@ type DemoView =
 export function DemoSection() {
   const router = useRouter();
   const [view, setView] = useState<DemoView>({ kind: "loading" });
-  const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,7 +70,6 @@ export function DemoSection() {
         vehicle_count: r.status.vehicle_count,
         driver_count: r.status.driver_count,
       });
-      setCredentials(r.credentials);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Seed failed");
     } finally {
@@ -86,7 +89,6 @@ export function DemoSection() {
         vehicle_count: r.vehicle_count,
         driver_count: r.driver_count,
       });
-      setCredentials(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Reset failed");
     } finally {
@@ -95,12 +97,11 @@ export function DemoSection() {
   }
 
   async function handleSignIn() {
-    if (!credentials) return;
     setBusy("login");
     try {
       const res = await api<{ access_token: string }>("/api/v1/auth/login", {
         method: "POST",
-        body: JSON.stringify({ email: credentials.email, password: credentials.password }),
+        body: JSON.stringify(DEMO_CREDENTIALS),
       });
       setToken(res.access_token);
       const me = await api<{ id: string; email: string; name: string; role: string }>("/api/v1/auth/me");
@@ -161,18 +162,16 @@ export function DemoSection() {
                 </button>
               ) : (
                 <>
-                  {credentials && (
-                    <div className="mt-6 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm">
-                      <p className="font-semibold text-blue-900">Demo credentials</p>
-                      <p className="mt-1 font-mono text-blue-800">
-                        {credentials.email} / {credentials.password}
-                      </p>
-                    </div>
-                  )}
+                  <div className="mt-6 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm">
+                    <p className="font-semibold text-blue-900">Demo credentials</p>
+                    <p className="mt-1 font-mono text-blue-800">
+                      {DEMO_CREDENTIALS.email} / {DEMO_CREDENTIALS.password}
+                    </p>
+                  </div>
                   <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                     <button
                       onClick={handleSignIn}
-                      disabled={busy !== null || !credentials}
+                      disabled={busy !== null}
                       className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
                     >
                       <LogIn className="h-4 w-4" />
@@ -187,11 +186,6 @@ export function DemoSection() {
                       Clear demo data
                     </button>
                   </div>
-                  {!credentials && (
-                    <p className="mt-3 text-center text-xs text-slate-400">
-                      Demo data already seeded. Click "Clear demo data" then "Seed demo data" to retrieve credentials.
-                    </p>
-                  )}
                 </>
               )}
             </>
