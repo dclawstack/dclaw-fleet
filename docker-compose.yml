@@ -27,12 +27,12 @@ services:
       # Demo mode — set ENABLE_DEMO_MODE=false in production deployments.
       ENABLE_DEMO_MODE: "true"
     ports:
-      - "8051:8051"
+      - "8139:8139"
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8051/health/')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8139/health/')"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -42,18 +42,18 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:8051
+        NEXT_PUBLIC_API_URL: http://localhost:8139
     environment:
-      PORT: 3051
+      PORT: 3053
     ports:
-      - "3051:3051"
+      - "3053:3053"
     depends_on:
       - backend
     healthcheck:
       # Use 127.0.0.1 because /etc/hosts resolves localhost to ::1 first and
       # Next.js standalone binds IPv4 only; busybox wget gets connection
       # refused on the IPv6 attempt without falling through.
-      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3051/"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3053/"]
       interval: 30s
       timeout: 5s
       retries: 3

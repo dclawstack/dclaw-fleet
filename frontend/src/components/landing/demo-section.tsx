@@ -226,8 +226,8 @@ function UnreachableState({ onRetry }: { onRetry: () => void }) {
         <pre className="overflow-x-auto font-mono text-xs leading-relaxed">{`git clone https://github.com/dclawstack/dclaw-fleet
 cd dclaw-fleet
 docker compose up
-# → frontend: http://localhost:3051
-# → backend:  http://localhost:8051`}</pre>
+# → frontend: http://localhost:3053
+# → backend:  http://localhost:8139`}</pre>
       </div>
 
       <button
