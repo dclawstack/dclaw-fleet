@@ -1,15 +1,15 @@
-"""AI Fleet Copilot — stubbed LLM with rule-based intent routing over live fleet data.
-
-NOTE: This is a deterministic stub. Swap `generate_assistant_reply` to call OpenRouter
-or local Ollama once credentials are provisioned; the data-gathering layer below is
-already RAG-ready.
-"""
+"""AI Fleet Copilot — Ollama-backed LLM over live fleet data, with a deterministic
+template fallback when Ollama is unconfigured/unreachable (also used by tests)."""
+import json
+import logging
 import re
 import uuid
 from datetime import date
 
+import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.models.ai_chat import AIChatMessage, AIChatSession
 from app.repositories.accident_repo import AccidentRepository
 from app.repositories.ai_chat_repo import AIChatMessageRepository, AIChatSessionRepository
@@ -229,6 +229,44 @@ def _render(intent: str, snap: dict) -> tuple[str, list[str]]:
     )
 
 
+log = logging.getLogger(__name__)
+
+_SYSTEM_PROMPT = (
+    "You are Fleet Copilot, an assistant for fleet managers. Answer using ONLY "
+    "the JSON fleet snapshot the user provides — never invent vehicles, drivers, "
+    "or counts. Be concise (1–3 sentences). If the snapshot does not contain the "
+    "answer, say so and suggest which API endpoint or page to check. Do not "
+    "wrap responses in markdown code blocks."
+)
+
+
+async def _generate_with_ollama(user_content: str, snapshot: dict, history: list[AIChatMessage]) -> str | None:
+    """Returns assistant text from Ollama, or None if Ollama is unconfigured/unreachable."""
+    if not settings.ollama_url:
+        return None
+
+    messages: list[dict] = [{"role": "system", "content": _SYSTEM_PROMPT}]
+    for m in history[-6:]:
+        messages.append({"role": m.role, "content": m.content})
+    messages.append({
+        "role": "user",
+        "content": f"Fleet snapshot:\n{json.dumps(snapshot, default=str)}\n\nQuestion: {user_content}",
+    })
+
+    try:
+        async with httpx.AsyncClient(timeout=settings.ollama_timeout_seconds) as http:
+            resp = await http.post(
+                f"{settings.ollama_url.rstrip('/')}/api/chat",
+                json={"model": settings.ollama_model, "messages": messages, "stream": False},
+            )
+            resp.raise_for_status()
+            text = (resp.json().get("message") or {}).get("content", "").strip()
+            return text or None
+    except Exception as exc:
+        log.warning("Ollama call failed, falling back to template: %s", exc)
+        return None
+
+
 async def chat_turn(
     db: AsyncSession,
     session_id: uuid.UUID | None,
@@ -240,18 +278,25 @@ async def chat_turn(
     if session_id is None:
         session = AIChatSession(title=user_content[:80] or "Fleet Copilot")
         session = await session_repo.create(session)
+        history: list[AIChatMessage] = []
     else:
         session = await session_repo.get_by_id(session_id)
         if session is None:
             session = AIChatSession(title=user_content[:80] or "Fleet Copilot")
             session = await session_repo.create(session)
+            history = []
+        else:
+            history = await msg_repo.for_session(session.id)
 
     user_msg = AIChatMessage(session_id=session.id, role="user", content=user_content)
     user_msg = await msg_repo.create(user_msg)
 
     snapshot = await _fleet_snapshot(db)
     intent = _classify(user_content)
-    reply_text, suggestions = _render(intent, snapshot)
+    template_text, suggestions = _render(intent, snapshot)
+
+    llm_text = await _generate_with_ollama(user_content, snapshot, history)
+    reply_text = llm_text or template_text
 
     assistant_msg = AIChatMessage(session_id=session.id, role="assistant", content=reply_text)
     assistant_msg = await msg_repo.create(assistant_msg)
