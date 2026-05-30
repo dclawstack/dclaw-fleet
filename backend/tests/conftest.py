@@ -1,4 +1,9 @@
 import os
+
+# Force the Fleet Copilot into deterministic template mode for tests.
+# Must be set before app.core.config is first imported below.
+os.environ["OLLAMA_URL"] = ""
+
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession

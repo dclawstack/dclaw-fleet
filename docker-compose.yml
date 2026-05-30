@@ -26,6 +26,12 @@ services:
       APP_ENV: production
       # Demo mode — set ENABLE_DEMO_MODE=false in production deployments.
       ENABLE_DEMO_MODE: "true"
+      # Fleet Copilot LLM — empty OLLAMA_URL falls back to the rule-based responder.
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:3b}
+    extra_hosts:
+      # Lets the container reach an Ollama instance running on the Docker host.
+      - "host.docker.internal:host-gateway"
     ports:
       - "8139:8139"
     depends_on:

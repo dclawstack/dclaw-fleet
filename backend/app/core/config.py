@@ -12,6 +12,12 @@ class Settings(BaseSettings):
     secret_key: str = "change-me-in-production"
     access_token_expire_minutes: int = 60
 
+    # Fleet Copilot LLM. Leave ollama_url blank to fall back to the deterministic
+    # template responder (used by tests and when Ollama is unreachable).
+    ollama_url: str = ""
+    ollama_model: str = "llama3.2:3b"
+    ollama_timeout_seconds: float = 30.0
+
     # Demo mode — when True, exposes public /api/v1/demo/* endpoints that
     # seed and tear down DEMO-* sample data for the landing page.
     # Leave False in production. Reset is scoped to records carrying the
