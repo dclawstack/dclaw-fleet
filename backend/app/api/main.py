@@ -31,6 +31,7 @@ from app.api.v1 import (
 )
 from app.core.config import settings
 from app.core.database import init_db
+from app.core.errors import register_exception_handlers
 from app.core.security import get_current_user
 
 
@@ -53,6 +54,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+register_exception_handlers(app)
 
 app.include_router(health.router, prefix="/health", tags=["health"])
 
