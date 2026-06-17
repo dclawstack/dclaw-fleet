@@ -64,6 +64,16 @@ async def test_limiter_runs_before_cache(client, rate_limit_on):
     assert statuses == [200, 200, 200, 429]
 
 
+def test_ratelimiter_is_bounded_by_max_clients():
+    rl = RateLimiter(max_clients=2)
+    for i in range(5):
+        rl.check(f"ip{i}:global", 100)
+    assert len(rl._hits) == 2
+    # Least-recently-seen clients evicted; the two most recent survive.
+    assert "ip4:global" in rl._hits
+    assert "ip0:global" not in rl._hits
+
+
 def test_ratelimiter_fixed_window():
     rl = RateLimiter()
     assert rl.check("ip:global", 2) == (True, 1, 0)

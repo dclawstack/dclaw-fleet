@@ -16,6 +16,7 @@ limit. Account lockout on repeated auth failures is a separate stateful concern
 and intentionally not handled here.
 """
 import time
+from collections import OrderedDict
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -28,10 +29,17 @@ _AUTH_PREFIX = "/api/v1/auth"
 
 
 class RateLimiter:
-    """Fixed-window request counter keyed by ``"<ip>:<bucket>"``."""
+    """Fixed-window request counter keyed by ``"<ip>:<bucket>"``.
 
-    def __init__(self) -> None:
-        self._hits: dict[str, tuple[int, float]] = {}
+    Bounded to ``max_clients`` so a flood of distinct IPs can't grow the map
+    without limit: on each check, windows that have fully expired are dropped
+    and, as a backstop, the least-recently-seen client is evicted if the cap is
+    still exceeded.
+    """
+
+    def __init__(self, max_clients: int = 10000) -> None:
+        self._hits: "OrderedDict[str, tuple[int, float]]" = OrderedDict()
+        self._max_clients = max_clients
 
     def check(self, key: str, limit: int) -> tuple[bool, int, int]:
         """Record a hit. Returns ``(allowed, remaining, retry_after)``."""
@@ -42,17 +50,29 @@ class RateLimiter:
 
         count += 1
         self._hits[key] = (count, window_start)
+        self._hits.move_to_end(key)
+        self._evict(now)
 
         if count > limit:
             retry_after = max(1, int(_WINDOW_SECONDS - (now - window_start)))
             return False, 0, retry_after
         return True, limit - count, 0
 
+    def _evict(self, now: float) -> None:
+        if len(self._hits) <= self._max_clients:
+            return
+        for key in [
+            k for k, (_, ws) in self._hits.items() if now - ws >= _WINDOW_SECONDS
+        ]:
+            self._hits.pop(key, None)
+        while len(self._hits) > self._max_clients:
+            self._hits.popitem(last=False)
+
     def clear(self) -> None:
         self._hits.clear()
 
 
-limiter = RateLimiter()
+limiter = RateLimiter(settings.rate_limit_max_clients)
 
 
 def _client_ip(request: Request) -> str:

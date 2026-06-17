@@ -74,6 +74,29 @@ def test_ttlcache_expires_entries():
     assert store.get("k") is None
 
 
+def test_ttlcache_is_bounded_by_max_entries():
+    store = TTLCache(max_entries=2)
+    future = time.monotonic() + 60
+    for i in range(5):
+        store.set(f"k{i}", _Entry(b"x", "application/json", f'"{i}"', future))
+    assert len(store._store) == 2
+    # Oldest keys evicted; the two most-recently-set survive.
+    assert store.get("k0") is None
+    assert store.get("k3") is not None
+    assert store.get("k4") is not None
+
+
+def test_ttlcache_eviction_prunes_expired_first():
+    store = TTLCache(max_entries=2)
+    now = time.monotonic()
+    store.set("stale", _Entry(b"x", "application/json", '"s"', now - 1))
+    store.set("fresh", _Entry(b"x", "application/json", '"f"', now + 60))
+    store.set("newer", _Entry(b"x", "application/json", '"n"', now + 60))
+    assert store.get("stale") is None
+    assert store.get("fresh") is not None
+    assert store.get("newer") is not None
+
+
 def test_ttlcache_invalidate_prefix():
     store = TTLCache()
     future = time.monotonic() + 60

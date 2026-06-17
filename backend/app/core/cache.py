@@ -15,6 +15,7 @@ than waiting out the TTL.
 """
 import hashlib
 import time
+from collections import OrderedDict
 from typing import Optional
 
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -37,10 +38,16 @@ class _Entry:
 
 
 class TTLCache:
-    """Tiny time-based cache keyed by request path+query."""
+    """Tiny time-based cache keyed by request path+query.
 
-    def __init__(self) -> None:
-        self._store: dict[str, _Entry] = {}
+    Bounded to ``max_entries`` so it can't grow without limit under load: on
+    insert, expired entries are pruned first and the least-recently-used entry
+    is evicted if the cap is still exceeded.
+    """
+
+    def __init__(self, max_entries: int = 1000) -> None:
+        self._store: "OrderedDict[str, _Entry]" = OrderedDict()
+        self._max_entries = max_entries
 
     def get(self, key: str) -> Optional[_Entry]:
         entry = self._store.get(key)
@@ -49,10 +56,22 @@ class TTLCache:
         if entry.expires_at <= time.monotonic():
             self._store.pop(key, None)
             return None
+        self._store.move_to_end(key)
         return entry
 
     def set(self, key: str, entry: _Entry) -> None:
         self._store[key] = entry
+        self._store.move_to_end(key)
+        self._evict()
+
+    def _evict(self) -> None:
+        if len(self._store) <= self._max_entries:
+            return
+        now = time.monotonic()
+        for key in [k for k, e in self._store.items() if e.expires_at <= now]:
+            self._store.pop(key, None)
+        while len(self._store) > self._max_entries:
+            self._store.popitem(last=False)
 
     def invalidate_prefix(self, prefix: str) -> None:
         for key in [k for k in self._store if k.startswith(prefix)]:
@@ -62,7 +81,7 @@ class TTLCache:
         self._store.clear()
 
 
-cache = TTLCache()
+cache = TTLCache(settings.cache_max_entries)
 
 
 def _resource_prefix(path: str) -> str:
