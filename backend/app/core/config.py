@@ -9,6 +9,14 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/dclaw_app"
 
+    # Connection pool sizing. Defaults are tuned for a single backend process
+    # serving ~1000 concurrent users while staying under Postgres' default
+    # max_connections (100). pool_size persistent + max_overflow burst = 30 max.
+    db_pool_size: int = 20
+    db_max_overflow: int = 10
+    db_pool_timeout: int = 30
+    db_pool_recycle: int = 1800
+
     secret_key: str = "change-me-in-production"
     access_token_expire_minutes: int = 60
 
