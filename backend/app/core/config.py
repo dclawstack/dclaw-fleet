@@ -21,12 +21,16 @@ class Settings(BaseSettings):
     # database from agents re-querying the same list/detail endpoints.
     cache_enabled: bool = True
     cache_ttl_seconds: int = 30
+    # Hard cap on cached responses held in memory (LRU eviction beyond this).
+    cache_max_entries: int = 1000
 
     # Per-IP rate limiting. Strict limit on /api/v1/auth (brute-force / re-auth
     # protection), looser limit for the rest of /api/v1. /health is exempt.
     rate_limit_enabled: bool = True
     rate_limit_per_minute: int = 100
     auth_rate_limit_per_minute: int = 5
+    # Hard cap on distinct clients tracked at once (LRU eviction beyond this).
+    rate_limit_max_clients: int = 10000
 
     secret_key: str = "change-me-in-production"
     access_token_expire_minutes: int = 60
