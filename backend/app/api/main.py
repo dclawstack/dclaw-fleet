@@ -29,6 +29,7 @@ from app.api.v1 import (
     telematics,
     vehicles,
 )
+from app.core.cache import register_cache
 from app.core.config import settings
 from app.core.database import init_db
 from app.core.errors import register_exception_handlers
@@ -55,6 +56,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+register_cache(app)
 register_exception_handlers(app)
 
 app.include_router(health.router, prefix="/health", tags=["health"])

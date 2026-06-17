@@ -4,6 +4,11 @@ import os
 # Must be set before app.core.config is first imported below.
 os.environ["OLLAMA_URL"] = ""
 
+# Disable the response cache for the domain suite — the in-process cache is
+# module-level and would otherwise leak payloads across tests (setup_db only
+# resets the DB). test_cache.py exercises the cache by toggling it on at runtime.
+os.environ["CACHE_ENABLED"] = "false"
+
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession

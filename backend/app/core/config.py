@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     db_pool_timeout: int = 30
     db_pool_recycle: int = 1800
 
+    # Response cache for GET endpoints. In-process TTL cache that shields the
+    # database from agents re-querying the same list/detail endpoints.
+    cache_enabled: bool = True
+    cache_ttl_seconds: int = 30
+
     secret_key: str = "change-me-in-production"
     access_token_expire_minutes: int = 60
 
