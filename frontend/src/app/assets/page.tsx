@@ -64,7 +64,7 @@ export default function AssetsPage() {
           <span key="sn" className="font-mono text-xs">{a.serial_number ?? "—"}</span>,
           a.location ?? "—",
           <Status key="st" value={a.status} />,
-          <button key="del" onClick={() => handleDelete(a.id)} className="text-slate-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>,
+          <button key="del" onClick={() => handleDelete(a.id)} aria-label="Delete asset" className="text-slate-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>,
         ])}
       />
     </div>

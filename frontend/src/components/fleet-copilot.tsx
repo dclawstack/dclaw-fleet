@@ -53,7 +53,7 @@ export function FleetCopilot() {
           <Bot className="h-5 w-5 text-blue-600" />
           <span className="font-semibold text-slate-900">Fleet Copilot</span>
         </div>
-        <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600">
+        <button onClick={() => setOpen(false)} aria-label="Close Fleet Copilot" className="text-slate-400 hover:text-slate-600">
           <X className="h-4 w-4" />
         </button>
       </header>
@@ -111,6 +111,7 @@ export function FleetCopilot() {
         <button
           type="submit"
           disabled={sending || !input.trim()}
+          aria-label="Send message"
           className="rounded-lg bg-blue-600 p-2 text-white hover:bg-blue-700 disabled:opacity-60"
         >
           <Send className="h-4 w-4" />

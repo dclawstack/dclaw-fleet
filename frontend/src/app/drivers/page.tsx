@@ -66,7 +66,7 @@ export default function DriversPage() {
           d.email, d.license_number,
           <SafetyBar key="s" score={d.safety_score} />,
           <Status key="st" value={d.status} />,
-          <button key="del" onClick={() => handleDelete(d.id)} className="text-slate-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>,
+          <button key="del" onClick={() => handleDelete(d.id)} aria-label="Delete driver" className="text-slate-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>,
         ])}
       />
     </div>
