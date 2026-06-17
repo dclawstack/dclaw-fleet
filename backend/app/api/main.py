@@ -33,6 +33,7 @@ from app.core.cache import register_cache
 from app.core.config import settings
 from app.core.database import init_db
 from app.core.errors import register_exception_handlers
+from app.core.ratelimit import register_rate_limit
 from app.core.security import get_current_user
 
 
@@ -48,6 +49,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+register_cache(app)
+# Rate limiting is registered after the cache so it sits outside it: requests
+# are counted before a cached response can be served.
+register_rate_limit(app)
+
+# CORS is registered last so it is the OUTERMOST layer and therefore attaches
+# its headers to every response on the way out — including 429s from the rate
+# limiter and bodies served from the cache, which would otherwise reach a
+# cross-origin browser without Access-Control-Allow-Origin.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -56,7 +66,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-register_cache(app)
 register_exception_handlers(app)
 
 app.include_router(health.router, prefix="/health", tags=["health"])
