@@ -125,7 +125,7 @@ export default function RoutesPage() {
           <Status key="s" value={r.status} />,
           <div key="a" className="flex items-center gap-2">
             <button onClick={() => handleOptimize(r.id)} className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"><Wand2 className="h-3 w-3" /> Optimize</button>
-            <button onClick={() => handleDelete(r.id)} className="text-slate-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
+            <button onClick={() => handleDelete(r.id)} aria-label="Delete route" className="text-slate-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
           </div>,
         ])}
       />

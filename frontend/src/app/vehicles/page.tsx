@@ -76,7 +76,7 @@ export default function VehiclesPage() {
           v.license_plate, `${v.make} ${v.model}`, v.year, v.fuel_type,
           v.odometer_miles.toLocaleString() + " mi",
           <Status key="s" value={v.status} />,
-          <button key="d" onClick={() => handleDelete(v.id)} className="text-slate-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>,
+          <button key="d" onClick={() => handleDelete(v.id)} aria-label="Delete vehicle" className="text-slate-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>,
         ])}
       />
     </div>
