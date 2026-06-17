@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     cache_enabled: bool = True
     cache_ttl_seconds: int = 30
 
+    # Per-IP rate limiting. Strict limit on /api/v1/auth (brute-force / re-auth
+    # protection), looser limit for the rest of /api/v1. /health is exempt.
+    rate_limit_enabled: bool = True
+    rate_limit_per_minute: int = 100
+    auth_rate_limit_per_minute: int = 5
+
     secret_key: str = "change-me-in-production"
     access_token_expire_minutes: int = 60
 

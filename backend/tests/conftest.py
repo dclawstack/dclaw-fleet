@@ -9,6 +9,11 @@ os.environ["OLLAMA_URL"] = ""
 # resets the DB). test_cache.py exercises the cache by toggling it on at runtime.
 os.environ["CACHE_ENABLED"] = "false"
 
+# Disable rate limiting for the domain suite — counters are process-local and
+# would accumulate across the many requests each test makes. test_ratelimit.py
+# exercises the limiter by toggling it on at runtime.
+os.environ["RATE_LIMIT_ENABLED"] = "false"
+
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
